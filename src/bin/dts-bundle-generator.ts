@@ -47,6 +47,7 @@ interface ParsedArgs extends yargs.Arguments {
 	'export-referenced-types': boolean;
 
 	'out-file': string | undefined;
+	'out-dir': string | undefined;
 	'umd-module-name': string | undefined;
 	project: string | undefined;
 	config: string | undefined;
@@ -70,6 +71,11 @@ function parseArgs(): ParsedArgs {
 			alias: 'o',
 			type: 'string',
 			description: 'File name of generated d.ts',
+		})
+		.option('out-dir', {
+			type: 'string',
+			description: 'Output directory for genereated d.ts files.\n' +
+				'For when specifying multiple entries',
 		})
 		.option('verbose', {
 			type: 'boolean',
@@ -199,9 +205,23 @@ function main(): void {
 
 		bundlerConfig = {
 			entries: args._.map<ConfigEntryPoint>((entryPath: string | number) => {
+				let outFile;
+
+				if (args['out-dir']) {
+					const { dir, name } = path.parse(String(entryPath));
+
+					if (args.project) {
+						outFile = path.join(args['out-dir'], path.relative(path.dirname(args.project), dir), name + '.d.ts');
+					} else {
+						outFile = path.join(args['out-dir'], dir, name + '.d.ts');
+					}
+				} else {
+					outFile = args['out-file'];
+				}
+
 				return {
 					filePath: String(entryPath),
-					outFile: args['out-file'],
+					outFile,
 					noCheck: args['no-check'],
 					libraries: {
 						allowedTypesLibraries: args['external-types'],
